@@ -12,7 +12,8 @@ const state = {
     сложность: 'Оценка затрат ресурсов алгоритма.'
   },
   readingAnchorY: 0,
-  currentChapterId: 'chapter-1',
+  currentChapterId: null,
+  completedChapterIds: new Set(),
   recommenderVersion: 'hybrid',
   recommendedChapterId: null
 };
@@ -50,12 +51,14 @@ const readingEls = {
   panel: document.getElementById('definition-panel'),
   term: document.getElementById('definition-term'),
   text: document.getElementById('definition-text'),
-  backBtn: document.getElementById('back-to-reading')
+  backBtn: document.getElementById('back-to-reading'),
+  currentChapterLabel: document.getElementById('current-chapter')
 };
 
 renderChapter();
 restoreReadingPosition();
 renderMasteryIndicators();
+renderCurrentChapter();
 
 assessmentEls.startBtn.addEventListener('click', startAssessment);
 assessmentEls.form.addEventListener('submit', handleNextQuestion);
@@ -119,7 +122,9 @@ async function startAssessment() {
     : 'Вопросы не получены.';
 
   renderQuestion();
-  emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: 'source=assessment-start' });
+  if (state.currentChapterId) {
+    emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: 'source=assessment-start' });
+  }
 }
 
 
@@ -163,6 +168,9 @@ async function submitAssessment() {
   assessmentEls.status.textContent = payload.needsRefinement
     ? 'Нужен уточняющий мини-тест.'
     : 'Результаты сохранены.';
+  if (state.currentChapterId) {
+    state.completedChapterIds.add(state.currentChapterId);
+  }
   emitEvent('answer_submit', { chapterId: state.currentChapterId, payload: `attempts=${state.attempts.length}` });
 
   const termKeys = Object.keys(payload.profile?.terms || {});
@@ -246,7 +254,8 @@ async function goToNextRecommendedChapter() {
     return;
   }
 
-  const response = await fetch(`/api/recommendations/next?studentId=${encodeURIComponent(state.studentId)}&courseId=${encodeURIComponent(state.courseId)}&recommenderVersion=${encodeURIComponent(state.recommenderVersion)}`);
+  const completedChapterIds = Array.from(state.completedChapterIds).join(',');
+  const response = await fetch(`/api/recommendations/next?studentId=${encodeURIComponent(state.studentId)}&courseId=${encodeURIComponent(state.courseId)}&completedChapterIds=${encodeURIComponent(completedChapterIds)}&recommenderVersion=${encodeURIComponent(state.recommenderVersion)}`);
   const payload = await response.json();
 
   state.recommendedChapterId = payload.chapterId || null;
@@ -257,9 +266,18 @@ async function goToNextRecommendedChapter() {
 
   const previousChapterId = state.currentChapterId;
   state.currentChapterId = state.recommendedChapterId;
+  renderCurrentChapter();
   emitEvent('recommendation_accept', { chapterId: state.recommendedChapterId, payload: 'accepted=true;mode=auto' });
-  emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: `source=auto-next;from=${previousChapterId}` });
+  emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: `source=auto-next;from=${previousChapterId || 'none'}` });
   assessmentEls.status.textContent = `Результаты сохранены. Автопереход к главе ${state.currentChapterId}.`;
+}
+
+
+
+function renderCurrentChapter() {
+  if (!readingEls.currentChapterLabel) return;
+  const chapterId = state.currentChapterId || '—';
+  readingEls.currentChapterLabel.textContent = `Текущая глава: ${chapterId}`;
 }
 
 function persistReadingPosition() {

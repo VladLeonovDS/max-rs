@@ -100,15 +100,63 @@ public class AssessmentService {
     }
 
     private AssessmentQuestion buildQuestion(String termKey, ParserDtos.CourseDoc doc) {
-        String definition = doc.definitions().stream().filter(d -> d.termKey().equals(termKey)).map(ParserDtos.DefinitionDoc::text).findFirst().orElse("Определение отсутствует");
-        String prompt = "Выберите корректное определение термина: " + termKey;
-        List<String> distractors = doc.definitions().stream().filter(d -> !d.termKey().equals(termKey)).map(ParserDtos.DefinitionDoc::text).limit(3).toList();
-        List<String> options = new ArrayList<>();
-        options.add(definition);
-        options.addAll(distractors);
-        while (options.size() < 4) options.add("Некорректный вариант");
-        Collections.shuffle(options);
+        String definition = doc.definitions().stream()
+                .filter(d -> d.termKey().equals(termKey))
+                .map(ParserDtos.DefinitionDoc::text)
+                .findFirst()
+                .orElse("Определение отсутствует");
 
-        return new AssessmentQuestion("assess-" + termKey, termKey, prompt, options, definition);
+        String normalizedDefinition = normalizeDefinitionForPrompt(definition);
+        String prompt = "Какой термин соответствует определению: «" + normalizedDefinition + "»?";
+
+        String correctOption = resolveDisplayName(termKey, definition);
+        List<String> options = doc.definitions().stream()
+                .filter(d -> !d.termKey().equals(termKey))
+                .map(d -> resolveDisplayName(d.termKey(), d.text()))
+                .distinct()
+                .limit(3)
+                .collect(Collectors.toCollection(ArrayList::new));
+        options.add(correctOption);
+
+        while (options.size() < 4) {
+            options.add("Термин отсутствует");
+        }
+
+        Collections.shuffle(options);
+        return new AssessmentQuestion("assess-" + termKey, termKey, prompt, options, correctOption);
+    }
+
+    private String normalizeDefinitionForPrompt(String definition) {
+        if (definition == null || definition.isBlank()) {
+            return "Определение отсутствует";
+        }
+
+        String normalized = definition.trim().replaceAll("\\s+", " ");
+        int separatorIndex = normalized.indexOf("—");
+        if (separatorIndex <= 0) {
+            separatorIndex = normalized.indexOf("-");
+        }
+
+        if (separatorIndex > 0 && separatorIndex + 1 < normalized.length()) {
+            return normalized.substring(separatorIndex + 1).trim();
+        }
+        return normalized;
+    }
+
+    private String resolveDisplayName(String termKey, String definition) {
+        if (definition != null && !definition.isBlank()) {
+            String normalized = definition.trim().replaceAll("\\s+", " ");
+            int separatorIndex = normalized.indexOf("—");
+            if (separatorIndex <= 0) {
+                separatorIndex = normalized.indexOf("-");
+            }
+            if (separatorIndex > 0) {
+                String candidate = normalized.substring(0, separatorIndex).trim();
+                if (!candidate.isEmpty()) {
+                    return candidate;
+                }
+            }
+        }
+        return termKey.replace('_', ' ');
     }
 }
