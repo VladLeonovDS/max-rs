@@ -16,6 +16,15 @@
   <section class="card" id="assessment-card">
     <h2>1. Входной тест</h2>
     <div class="controls-row">
+      <label for="herzendoc-variant">HerzenDoc-вариант</label>
+      <select id="herzendoc-variant" aria-label="HerzenDoc вариант курса">
+        <option value="demo" selected>Демо: встроенный курс (course-001)</option>
+        <option value="valid-course">valid-course.herzendoc (informatics-8)</option>
+        <option value="algorithms-track">Algorithms Track (algorithms-track-2026)</option>
+      </select>
+      <button id="apply-variant" type="button">Применить курс</button>
+    </div>
+    <div class="controls-row">
       <input id="student-id" value="student-001" aria-label="Student ID" />
       <input id="course-id" value="course-001" aria-label="Course ID" />
       <button id="start-assessment">Начать тест</button>

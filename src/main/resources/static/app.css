@@ -27,10 +27,14 @@ body {
 .subtitle, .muted { color: #64748b; }
 
 .controls-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-input, button {
+input, select, button {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 10px;
+}
+label {
+  font-size: 14px;
+  color: #334155;
 }
 button {
   background: #2563eb;
