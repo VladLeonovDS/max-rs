@@ -55,28 +55,4 @@ class RecommendationServiceTest {
         assertNotNull(rec.reason());
         assertFalse(rec.reason().isBlank());
     }
-
-    @Test
-    void recommendsNextChapterAfterCompletionEvenWithoutAssessment() {
-        String course = """
-                @meta version="1.0.0" course="rec-2"
-                @term key="t1"
-                @definition term="t1"
-                d1
-                @chapter id="c1" title="Basics" introduces="t1"
-                learn @t1
-                @chapter id="c2" title="Advanced" requires="c1"
-                use @t1
-                @question id="q1" chapter="c1" type="single"
-                p
-                @key question="q1"
-                A
-                """;
-        assertTrue(importService.importCourse(course, true).valid());
-
-        var rec = recommendationService.next("st-2", "rec-2", Set.of("c1"), "hybrid");
-        assertNotNull(rec.chapterId());
-        assertEquals("c2", rec.chapterId());
-    }
-
 }

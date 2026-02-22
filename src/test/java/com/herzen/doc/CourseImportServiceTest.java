@@ -36,7 +36,6 @@ class CourseImportServiceTest {
         var result = service.importCourse(doc, true);
         assertTrue(result.valid());
         assertEquals("informatics-8", result.course().id());
-        assertEquals("Learn algorithm", result.course().chapters().stream().filter(ch -> ch.id().equals("ch1")).findFirst().orElseThrow().content());
 
         var eligible = service.eligibleChapters("informatics-8", Set.of(), Set.of("algorithm"));
         assertTrue(eligible.contains("ch1"));

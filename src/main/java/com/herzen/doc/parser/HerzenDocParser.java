@@ -12,7 +12,6 @@ import static com.herzen.doc.parser.ParserDtos.*;
 public class HerzenDocParser {
     private static final Pattern MARKER_PATTERN = Pattern.compile("^@([a-z][a-z0-9_]*)\\s*(.*)$");
     private static final Pattern ATTR_PATTERN = Pattern.compile("([a-z][a-z0-9_]*)=\"((?:\\\\.|[^\"\\\\])*)\"");
-    private static final Pattern TERM_MENTION_PATTERN = Pattern.compile("@([a-zA-Z0-9_-]+)");
 
     public ParseResult parse(String content) {
         List<ParseError> errors = new ArrayList<>();
@@ -136,7 +135,7 @@ public class HerzenDocParser {
                 List<String> prereq = csv(attrs.get("requires"));
                 List<String> introduces = csv(attrs.get("introduces"));
                 List<String> uses = extractUsedTerms(body);
-                chapters.add(new ChapterDoc(id, title, difficulty, normalizeChapterContent(body), prereq, introduces, uses, line));
+                chapters.add(new ChapterDoc(id, title, difficulty, body, prereq, introduces, uses, line));
             }
             case "term" -> {
                 String key = attrs.get("key");
@@ -177,17 +176,12 @@ public class HerzenDocParser {
 
     private List<String> extractUsedTerms(String body) {
         if (body == null || body.isBlank()) return List.of();
-        Matcher matcher = TERM_MENTION_PATTERN.matcher(body);
+        Matcher matcher = Pattern.compile("@([a-zA-Z0-9_-]+)").matcher(body);
         LinkedHashSet<String> keys = new LinkedHashSet<>();
         while (matcher.find()) {
             keys.add(matcher.group(1));
         }
         return List.copyOf(keys);
-    }
-
-    private String normalizeChapterContent(String body) {
-        if (body == null || body.isBlank()) return body;
-        return TERM_MENTION_PATTERN.matcher(body).replaceAll(match -> match.group(1).replace('_', ' '));
     }
 
     public record ParseResult(CourseDoc doc, List<ParseError> errors) {}

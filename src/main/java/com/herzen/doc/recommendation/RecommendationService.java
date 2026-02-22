@@ -23,15 +23,9 @@ public class RecommendationService {
         String version = normalizeVersion(recommenderVersion);
         Map<String, Double> studentMastery = repository.loadStudentKnowledge(studentId, courseId).stream()
                 .collect(Collectors.toMap(StudentTermRow::termKey, StudentTermRow::masteryScore, (a, b) -> b));
-        Set<String> completed = completedChapterIds == null ? Set.of() : completedChapterIds;
+        Set<String> mastered = studentMastery.entrySet().stream().filter(e -> e.getValue() >= 0.6).map(Map.Entry::getKey).collect(Collectors.toSet());
 
-        Set<String> mastered = studentMastery.entrySet().stream()
-                .filter(e -> e.getValue() >= 0.6)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toCollection(HashSet::new));
-        mastered.addAll(inferMasteredTermsFromCompletedChapters(courseId, completed));
-
-        List<String> eligible = courseImportService.eligibleChapters(courseId, completed, mastered);
+        List<String> eligible = courseImportService.eligibleChapters(courseId, completedChapterIds, mastered);
         if (eligible.isEmpty()) {
             return new RecommendationModels.RecommendationResult(null, 0.0, "Нет логически доступных глав", List.of(), true, version);
         }
@@ -82,16 +76,6 @@ public class RecommendationService {
                     "[" + version + "] " + best.reason());
         }
         return best;
-    }
-
-    private Set<String> inferMasteredTermsFromCompletedChapters(String courseId, Set<String> completedChapterIds) {
-        if (completedChapterIds == null || completedChapterIds.isEmpty()) return Set.of();
-
-        return completedChapterIds.stream()
-                .flatMap(chapterId -> repository.loadChapterTerms(courseId, chapterId).stream())
-                .filter(term -> "introduces".equalsIgnoreCase(term.role()))
-                .map(ChapterTermRoleRow::termKey)
-                .collect(Collectors.toSet());
     }
 
     private String normalizeVersion(String recommenderVersion) {
