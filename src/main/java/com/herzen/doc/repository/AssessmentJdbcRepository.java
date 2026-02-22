@@ -30,7 +30,7 @@ public class AssessmentJdbcRepository {
 
     public void saveEvents(List<LearningEvent> events) {
         events.forEach(e -> jdbcTemplate.update(
-                "INSERT INTO learning_events(student_id, course_id, event_type, ts, payload) VALUES (?,?,?,?,?)",
-                e.studentId(), e.courseId(), e.eventType(), e.ts().toString(), e.payload()));
+                "INSERT INTO learning_events(student_id, course_id, chapter_id, event_type, ts, payload, recommender_version) VALUES (?,?,?,?,?,?,?)",
+                e.studentId(), e.courseId(), e.chapterId(), e.eventType(), e.ts().toString(), e.payload(), e.recommenderVersion()));
     }
 }

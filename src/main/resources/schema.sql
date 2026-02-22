@@ -32,9 +32,11 @@ CREATE TABLE IF NOT EXISTS learning_events (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(128) NOT NULL,
     course_id VARCHAR(128) NOT NULL,
+    chapter_id VARCHAR(128),
     event_type VARCHAR(128) NOT NULL,
     ts VARCHAR(64) NOT NULL,
-    payload CLOB
+    payload CLOB,
+    recommender_version VARCHAR(128)
 );
 
 CREATE TABLE IF NOT EXISTS recommendation_log (
@@ -46,4 +48,20 @@ CREATE TABLE IF NOT EXISTS recommendation_log (
     reason CLOB NOT NULL,
     factors CLOB,
     ts VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS analytics_aggregates (
+    scope_type VARCHAR(64) NOT NULL,
+    student_id VARCHAR(128),
+    course_id VARCHAR(128),
+    chapter_id VARCHAR(128),
+    recommender_version VARCHAR(128),
+    learning_gain DOUBLE NOT NULL,
+    time_to_mastery_seconds DOUBLE,
+    recommendation_acceptance DOUBLE NOT NULL,
+    drop_off DOUBLE NOT NULL,
+    prerequisite_violation DOUBLE NOT NULL,
+    computed_at VARCHAR(64) NOT NULL,
+    counters CLOB,
+    PRIMARY KEY (scope_type, student_id, course_id, chapter_id, recommender_version)
 );

@@ -21,9 +21,10 @@ public class RecommendationController {
     @GetMapping("/next")
     public ResponseEntity<RecommendationModels.RecommendationResult> next(@RequestParam String studentId,
                                                                           @RequestParam String courseId,
-                                                                          @RequestParam(required = false) String completedChapterIds) {
+                                                                          @RequestParam(required = false) String completedChapterIds,
+                                                                          @RequestParam(required = false, defaultValue = "hybrid") String recommenderVersion) {
         Set<String> completed = parseCsv(completedChapterIds);
-        return ResponseEntity.ok(recommendationService.next(studentId, courseId, completed));
+        return ResponseEntity.ok(recommendationService.next(studentId, courseId, completed, recommenderVersion));
     }
 
     private Set<String> parseCsv(String csv) {

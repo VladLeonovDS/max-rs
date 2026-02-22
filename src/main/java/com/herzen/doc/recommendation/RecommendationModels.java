@@ -7,7 +7,8 @@ public class RecommendationModels {
                                        double score,
                                        String reason,
                                        List<FactorScore> factors,
-                                       boolean coldStartFallback) {}
+                                       boolean coldStartFallback,
+                                       String recommenderVersion) {}
 
     public record FactorScore(String name, double value) {}
 }

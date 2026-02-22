@@ -27,5 +27,5 @@ public class AssessmentModels {
                                            StudentKnowledgeProfile profile,
                                            List<LearningEvent> events) {}
 
-    public record LearningEvent(String studentId, String courseId, String eventType, Instant ts, String payload) {}
+    public record LearningEvent(String studentId, String courseId, String chapterId, String eventType, Instant ts, String payload, String recommenderVersion) {}
 }

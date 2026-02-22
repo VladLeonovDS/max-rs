@@ -5,6 +5,8 @@ import com.herzen.doc.parser.ParserDtos;
 import com.herzen.doc.repository.AssessmentJdbcRepository;
 import org.springframework.stereotype.Service;
 
+import com.herzen.doc.analytics.LearningEventTypes;
+
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,8 +64,8 @@ public class AssessmentService {
         repository.saveKnowledge(knowledge);
 
         List<LearningEvent> events = List.of(
-                new LearningEvent(studentId, courseId, "assessment_submitted", Instant.now(), "session=" + sessionId + ",answers=" + attempts.size()),
-                new LearningEvent(studentId, courseId, "knowledge_updated", Instant.now(), "terms=" + knowledge.size())
+                new LearningEvent(studentId, courseId, null, LearningEventTypes.ANSWER_SUBMIT, Instant.now(),
+                        "session=" + sessionId + ",answers=" + attempts.size() + ",terms=" + knowledge.size(), "default")
         );
         repository.saveEvents(events);
 
@@ -84,7 +86,7 @@ public class AssessmentService {
                 Set<String> asked = new HashSet<>(session.askedTerms());
                 asked.addAll(refinement.stream().map(AssessmentQuestion::termKey).toList());
                 sessions.put(sessionId, new AssessmentSession(sessionId, courseId, session.startedAt(), asked, true));
-                repository.saveEvents(List.of(new LearningEvent(studentId, courseId, "assessment_refinement_requested", Instant.now(), "questions=" + refinement.size())));
+                repository.saveEvents(List.of(new LearningEvent(studentId, courseId, null, LearningEventTypes.ANSWER_SUBMIT, Instant.now(), "refinement_questions=" + refinement.size(), "default")));
             }
         }
 
