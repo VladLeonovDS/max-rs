@@ -14,74 +14,7 @@ const state = {
   readingAnchorY: 0,
   currentChapterId: 'chapter-1',
   recommenderVersion: 'hybrid',
-  recommendedChapterId: null,
-  selectedVariant: 'demo'
-};
-
-
-const herzenDocVariants = {
-  demo: null,
-  'valid-course': {
-    courseId: 'informatics-8',
-    content: `# valid example
-@meta version="1.0.0" course="informatics-8" title="Информатика 8 класс"
-
-@term key="algorithm"
-@definition term="algorithm"
-Алгоритм — это конечная последовательность шагов для решения задачи.
-
-@term key="complexity"
-@definition term="complexity"
-Сложность — мера ресурсов (время/память), необходимых для выполнения алгоритма.
-
-@chapter id="ch-intro" title="Введение в алгоритмы" difficulty="1"
-В этой главе вводится термин @complexity и базовые свойства алгоритмов.
-
-@question id="q1" chapter="ch-intro" type="single"
-Что такое алгоритм?
-- A: Способ хранения данных
-- B: Конечная последовательность шагов
-- C: Язык программирования
-
-@key question="q1"
-B`
-  },
-  'algorithms-track': {
-    courseId: 'algorithms-track-2026',
-    content: `@meta version="1.0.0" course="algorithms-track-2026" title="Алгоритмы: учебный трек"
-
-@term key="algorithm"
-@definition term="algorithm"
-Алгоритм — точная последовательность шагов для решения задачи.
-
-@term key="graph"
-@definition term="graph"
-Граф — структура из вершин и рёбер для описания связей.
-
-@chapter id="a1" title="Алгоритм и его свойства" introduces="algorithm" difficulty="1"
-Разбираем свойства алгоритма и составляем примеры для повседневных задач.
-
-@chapter id="a2" title="Графы и маршруты" requires="a1" introduces="graph" uses="algorithm" difficulty="2"
-Изучаем графовые модели и ищем кратчайшие маршруты в простых задачах.
-
-@question id="qa1" chapter="a1" type="single"
-Какое свойство обязательно для алгоритма?
-- A: Конечность шагов
-- B: Красивый интерфейс
-- C: Высокая стоимость
-
-@key question="qa1"
-A
-
-@question id="qa2" chapter="a2" type="single"
-Что описывает граф?
-- A: Только числа
-- B: Связи между объектами
-- C: Цвета интерфейса
-
-@key question="qa2"
-B`
-  }
+  recommendedChapterId: null
 };
 
 const chapterTemplate = [
@@ -107,9 +40,7 @@ const assessmentEls = {
   options: document.getElementById('question-options'),
   nextBtn: document.getElementById('next-question'),
   submitBtn: document.getElementById('submit-assessment'),
-  status: document.getElementById('assessment-status'),
-  variantSelect: document.getElementById('herzendoc-variant'),
-  applyVariantBtn: document.getElementById('apply-variant')
+  status: document.getElementById('assessment-status')
 };
 
 const readingEls = {
@@ -122,60 +53,41 @@ const readingEls = {
   backBtn: document.getElementById('back-to-reading')
 };
 
-const recommendationEls = {
-  loadBtn: document.getElementById('load-recommendation'),
-  acceptBtn: document.getElementById('accept-recommendation'),
-  result: document.getElementById('recommendation-result')
-};
-
 renderChapter();
 restoreReadingPosition();
 renderMasteryIndicators();
 
 assessmentEls.startBtn.addEventListener('click', startAssessment);
-assessmentEls.applyVariantBtn.addEventListener('click', applySelectedVariant);
 assessmentEls.form.addEventListener('submit', handleNextQuestion);
 assessmentEls.submitBtn.addEventListener('click', submitAssessment);
 readingEls.backBtn.addEventListener('click', closeDefinitionPanel);
-recommendationEls.loadBtn.addEventListener('click', loadRecommendation);
-recommendationEls.acceptBtn.addEventListener('click', acceptRecommendation);
 window.addEventListener('scroll', persistReadingPosition);
 
-initializeCourseVariant();
-
-
-function initializeCourseVariant() {
-  state.selectedVariant = assessmentEls.variantSelect.value;
-}
-
-async function applySelectedVariant() {
-  const variantKey = assessmentEls.variantSelect.value;
-  state.selectedVariant = variantKey;
-  const variant = herzenDocVariants[variantKey];
-
-  if (!variant) {
-    assessmentEls.courseId.value = 'course-001';
-    state.courseId = assessmentEls.courseId.value;
-    assessmentEls.status.textContent = 'Выбран встроенный демо-курс.';
-    return;
+async function ensureInf8PilotCourse() {
+  assessmentEls.status.textContent = 'Импортируем курс inf-8-pilot...';
+  const contentResponse = await fetch('/courses/inf-8-pilot.herzendoc');
+  if (!contentResponse.ok) {
+    assessmentEls.status.textContent = 'Не удалось загрузить курс inf-8-pilot.';
+    return false;
   }
 
-  assessmentEls.status.textContent = 'Импортируем HerzenDoc-вариант...';
+  const content = await contentResponse.text();
   const response = await fetch('/api/courses/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: variant.content, dryRun: false })
+    body: JSON.stringify({ content, dryRun: false })
   });
 
   const payload = await response.json();
   if (!response.ok || !payload.valid || !payload.course?.id) {
-    assessmentEls.status.textContent = 'Не удалось импортировать выбранный HerzenDoc-вариант.';
-    return;
+    assessmentEls.status.textContent = 'Не удалось импортировать курс inf-8-pilot.';
+    return false;
   }
 
   assessmentEls.courseId.value = payload.course.id;
   state.courseId = payload.course.id;
   assessmentEls.status.textContent = `Курс ${payload.course.title} (${payload.course.id}) готов к обучению.`;
+  return true;
 }
 
 async function startAssessment() {
@@ -183,8 +95,9 @@ async function startAssessment() {
   state.courseId = assessmentEls.courseId.value.trim();
   if (!state.studentId || !state.courseId) return;
 
-  if (state.selectedVariant !== 'demo') {
-    await applySelectedVariant();
+  const courseReady = await ensureInf8PilotCourse();
+  if (!courseReady) {
+    return;
   }
 
   assessmentEls.status.textContent = 'Запрашиваем вопросы...';
@@ -255,6 +168,7 @@ async function submitAssessment() {
   const termKeys = Object.keys(payload.profile?.terms || {});
   state.coveredTerms = new Set(termKeys.filter((key) => (payload.profile.terms[key]?.masteryScore ?? 0) >= 0.6));
   renderMasteryIndicators();
+  await goToNextRecommendedChapter();
 }
 
 function renderQuestion() {
@@ -326,9 +240,9 @@ function renderMasteryIndicators() {
   readingEls.remaining.innerHTML = remaining.map((term) => `<li class="remaining">${term}</li>`).join('') || '<li class="remaining">Нет</li>';
 }
 
-async function loadRecommendation() {
+async function goToNextRecommendedChapter() {
   if (!state.studentId || !state.courseId) {
-    recommendationEls.result.textContent = 'Сначала запустите входной тест.';
+    assessmentEls.status.textContent = 'Сначала запустите входной тест.';
     return;
   }
 
@@ -336,17 +250,16 @@ async function loadRecommendation() {
   const payload = await response.json();
 
   state.recommendedChapterId = payload.chapterId || null;
-  recommendationEls.result.innerHTML = `
-    <p><strong>Глава:</strong> ${payload.chapterId || '—'}</p>
-    <p><strong>Причина выбора:</strong> ${payload.reason || '—'}</p>
-    <p><strong>Скор:</strong> ${(payload.score ?? 0).toFixed(2)}</p>
-  `;
-}
+  if (!state.recommendedChapterId) {
+    assessmentEls.status.textContent = 'Рекомендация пока не найдена.';
+    return;
+  }
 
-
-function acceptRecommendation() {
-  emitEvent('recommendation_accept', { chapterId: state.recommendedChapterId || state.currentChapterId, payload: 'accepted=true' });
-  recommendationEls.result.insertAdjacentHTML('beforeend', '<p><em>Рекомендация принята.</em></p>');
+  const previousChapterId = state.currentChapterId;
+  state.currentChapterId = state.recommendedChapterId;
+  emitEvent('recommendation_accept', { chapterId: state.recommendedChapterId, payload: 'accepted=true;mode=auto' });
+  emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: `source=auto-next;from=${previousChapterId}` });
+  assessmentEls.status.textContent = `Результаты сохранены. Автопереход к главе ${state.currentChapterId}.`;
 }
 
 function persistReadingPosition() {
