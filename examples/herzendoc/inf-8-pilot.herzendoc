@@ -1,0 +1,58 @@
+@meta version="1.0.0" course="inf-8-pilot"
+
+@term key="algorithm"
+@definition term="algorithm"
+Точное и конечное предписание шагов для решения задачи.
+
+@term key="executor"
+@definition term="executor"
+Объект, который выполняет команды алгоритма.
+
+@term key="branching"
+@definition term="branching"
+Конструкция выбора действий в зависимости от условия.
+
+@term key="loop"
+@definition term="loop"
+Повторение группы команд до выполнения условия остановки.
+
+@term key="complexity"
+@definition term="complexity"
+Оценка ресурсов, необходимых для выполнения алгоритма.
+
+@chapter id="c1" title="Алгоритмы и исполнители" introduces="algorithm,executor" difficulty="1"
+Алгоритм — это последовательность команд для исполнителя @algorithm @executor
+
+@chapter id="c2" title="Ветвления" requires="c1" introduces="branching" uses="algorithm" difficulty="2"
+Решения принимаются на основе условий и конструкций выбора @branching
+
+@chapter id="c3" title="Циклы" requires="c2" introduces="loop" uses="algorithm,branching" difficulty="3"
+Циклы помогают сокращать запись повторяющихся действий @loop
+
+@chapter id="c4" title="Сложность алгоритмов" requires="c3" introduces="complexity" uses="algorithm,loop" difficulty="4"
+Сравнение алгоритмов выполняется по времени и памяти @complexity
+
+@question id="q1" chapter="c1" type="single"
+Что лучше всего описывает алгоритм?
+@key question="q1"
+Точное и конечное предписание шагов.
+
+@question id="q2" chapter="c1" type="single"
+Кто выполняет команды алгоритма?
+@key question="q2"
+Исполнитель.
+
+@question id="q3" chapter="c2" type="single"
+Для чего используется ветвление?
+@key question="q3"
+Для выбора действия по условию.
+
+@question id="q4" chapter="c3" type="single"
+Когда уместен цикл?
+@key question="q4"
+Когда требуется повторять шаги.
+
+@question id="q5" chapter="c4" type="single"
+Что отражает сложность алгоритма?
+@key question="q5"
+Затраты времени и/или памяти.

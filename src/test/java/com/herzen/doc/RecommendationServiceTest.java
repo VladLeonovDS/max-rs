@@ -49,7 +49,7 @@ class RecommendationServiceTest {
                 .toList();
         assessmentService.submitAnswers("st-1", "rec-1", start.sessionId(), attempts);
 
-        var rec = recommendationService.next("st-1", "rec-1", Set.of());
+        var rec = recommendationService.next("st-1", "rec-1", Set.of(), "hybrid");
         assertNotNull(rec.chapterId());
         assertEquals("c1", rec.chapterId());
         assertNotNull(rec.reason());

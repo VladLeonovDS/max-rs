@@ -1,0 +1,87 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fb;
+  color: #1e293b;
+}
+
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.subtitle, .muted { color: #64748b; }
+
+.controls-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+input, button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+button {
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.progress-wrap { margin-top: 12px; }
+.progress-meta { display: flex; justify-content: space-between; font-size: 14px; }
+.progress-track {
+  margin-top: 8px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  height: 10px;
+}
+#assessment-progress-bar {
+  background: linear-gradient(90deg, #0ea5e9, #2563eb);
+  width: 0;
+  height: 100%;
+}
+
+.term-chip {
+  border: 0;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin: 0 4px;
+}
+
+.mastery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+li.covered { color: #15803d; }
+li.remaining { color: #b45309; }
+
+.definition-panel {
+  position: fixed;
+  right: 24px;
+  top: 24px;
+  width: min(360px, 85vw);
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.35);
+}
+
+@media (max-width: 800px) {
+  .mastery-grid { grid-template-columns: 1fr; }
+}
