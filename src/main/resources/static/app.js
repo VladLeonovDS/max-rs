@@ -15,7 +15,9 @@ const state = {
   currentChapterId: null,
   completedChapterIds: new Set(),
   recommenderVersion: 'hybrid',
-  recommendedChapterId: null
+  recommendedChapterId: null,
+  chaptersById: {},
+  chapterOrder: []
 };
 
 const chapterTemplate = [
@@ -60,11 +62,52 @@ restoreReadingPosition();
 renderMasteryIndicators();
 renderCurrentChapter();
 
-assessmentEls.startBtn.addEventListener('click', startAssessment);
+assessmentEls.startBtn.addEventListener('click', () => startAssessment());
 assessmentEls.form.addEventListener('submit', handleNextQuestion);
 assessmentEls.submitBtn.addEventListener('click', submitAssessment);
 readingEls.backBtn.addEventListener('click', closeDefinitionPanel);
 window.addEventListener('scroll', persistReadingPosition);
+
+function parseHerzenDocChapters(content) {
+  const lines = content.split(/\r?\n/);
+  const chaptersById = {};
+  const chapterOrder = [];
+
+  let current = null;
+  const flushCurrent = () => {
+    if (!current?.id) return;
+    current.content = current.contentLines.join('\n').trim();
+    delete current.contentLines;
+    chaptersById[current.id] = current;
+    chapterOrder.push(current.id);
+  };
+
+  lines.forEach((line) => {
+    const chapterMatch = line.match(/^@chapter\s+id="([^"]+)"\s+title="([^"]+)"(?:\s+[^\n]*)?$/);
+    if (chapterMatch) {
+      flushCurrent();
+      current = {
+        id: chapterMatch[1],
+        title: chapterMatch[2],
+        contentLines: []
+      };
+      return;
+    }
+
+    if (line.startsWith('@') && current) {
+      flushCurrent();
+      current = null;
+      return;
+    }
+
+    if (current) {
+      current.contentLines.push(line);
+    }
+  });
+
+  flushCurrent();
+  return { chaptersById, chapterOrder };
+}
 
 async function ensureInf8PilotCourse() {
   assessmentEls.status.textContent = 'Импортируем курс inf-8-pilot...';
@@ -75,6 +118,10 @@ async function ensureInf8PilotCourse() {
   }
 
   const content = await contentResponse.text();
+  const parsed = parseHerzenDocChapters(content);
+  state.chaptersById = parsed.chaptersById;
+  state.chapterOrder = parsed.chapterOrder;
+
   const response = await fetch('/api/courses/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -90,10 +137,17 @@ async function ensureInf8PilotCourse() {
   assessmentEls.courseId.value = payload.course.id;
   state.courseId = payload.course.id;
   assessmentEls.status.textContent = `Курс ${payload.course.title} (${payload.course.id}) готов к обучению.`;
+
+  if (!state.currentChapterId && state.chapterOrder.length > 0) {
+    state.currentChapterId = state.chapterOrder[0];
+    renderCurrentChapter();
+    renderChapter();
+  }
+
   return true;
 }
 
-async function startAssessment() {
+async function startAssessment(options = {}) {
   state.studentId = assessmentEls.studentId.value.trim();
   state.courseId = assessmentEls.courseId.value.trim();
   if (!state.studentId || !state.courseId) return;
@@ -122,11 +176,10 @@ async function startAssessment() {
     : 'Вопросы не получены.';
 
   renderQuestion();
-  if (state.currentChapterId) {
+  if (!options.silent && state.currentChapterId) {
     emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: 'source=assessment-start' });
   }
 }
-
 
 function handleNextQuestion(event) {
   event.preventDefault();
@@ -181,8 +234,12 @@ async function submitAssessment() {
 
 function renderQuestion() {
   const question = state.questions[state.currentQuestionIdx];
-  if (!question) return;
+  if (!question) {
+    assessmentEls.form.hidden = true;
+    return;
+  }
 
+  assessmentEls.form.hidden = false;
   assessmentEls.prompt.textContent = question.prompt;
   assessmentEls.options.innerHTML = '';
   question.options.forEach((option, idx) => {
@@ -210,6 +267,13 @@ function updateAssessmentProgress() {
 
 function renderChapter() {
   readingEls.chapter.innerHTML = '';
+
+  const chapter = state.currentChapterId ? state.chaptersById[state.currentChapterId] : null;
+  if (chapter?.content) {
+    readingEls.chapter.textContent = chapter.content;
+    return;
+  }
+
   chapterTemplate.forEach((part) => {
     if (typeof part === 'string') {
       readingEls.chapter.insertAdjacentText('beforeend', part);
@@ -267,17 +331,21 @@ async function goToNextRecommendedChapter() {
   const previousChapterId = state.currentChapterId;
   state.currentChapterId = state.recommendedChapterId;
   renderCurrentChapter();
+  renderChapter();
   emitEvent('recommendation_accept', { chapterId: state.recommendedChapterId, payload: 'accepted=true;mode=auto' });
   emitEvent('chapter_open', { chapterId: state.currentChapterId, payload: `source=auto-next;from=${previousChapterId || 'none'}` });
-  assessmentEls.status.textContent = `Результаты сохранены. Автопереход к главе ${state.currentChapterId}.`;
+
+  assessmentEls.status.textContent = `Результаты сохранены. Автопереход к главе ${state.currentChapterId}. Запускаем следующий тест...`;
+  await startAssessment({ silent: true });
 }
-
-
 
 function renderCurrentChapter() {
   if (!readingEls.currentChapterLabel) return;
   const chapterId = state.currentChapterId || '—';
-  readingEls.currentChapterLabel.textContent = `Текущая глава: ${chapterId}`;
+  const chapterTitle = state.chaptersById[chapterId]?.title;
+  readingEls.currentChapterLabel.textContent = chapterTitle
+    ? `Текущая глава: ${chapterId} — ${chapterTitle}`
+    : `Текущая глава: ${chapterId}`;
 }
 
 function persistReadingPosition() {
@@ -292,7 +360,6 @@ function restoreReadingPosition() {
     window.scrollTo({ top, behavior: 'auto' });
   }
 }
-
 
 function emitEvent(eventType, options = {}) {
   if (!state.studentId || !state.courseId) return;
