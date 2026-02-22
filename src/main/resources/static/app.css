@@ -74,6 +74,20 @@ button {
 li.covered { color: #15803d; }
 li.remaining { color: #b45309; }
 
+.term-link {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: #1d4ed8;
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+.term-link:hover {
+  color: #1e40af;
+}
+
 .definition-panel {
   position: fixed;
   right: 24px;
