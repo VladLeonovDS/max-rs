@@ -1,0 +1,22 @@
+# valid example
+@meta version="1.0.0" course="informatics-8" title="Информатика 8 класс"
+
+@term key="algorithm"
+@definition term="algorithm"
+Алгоритм — это конечная последовательность шагов для решения задачи.
+
+@term key="complexity"
+@definition term="complexity"
+Сложность — мера ресурсов (время/память), необходимых для выполнения алгоритма.
+
+@chapter id="ch-intro" title="Введение в алгоритмы" difficulty="1"
+В этой главе вводится термин @complexity и базовые свойства алгоритмов.
+
+@question id="q1" chapter="ch-intro" type="single"
+Что такое алгоритм?
+- A: Способ хранения данных
+- B: Конечная последовательность шагов
+- C: Язык программирования
+
+@key question="q1"
+B

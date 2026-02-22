@@ -1,0 +1,17 @@
+# invalid example: broken references and duplicates
+@meta version="1.0.0" course="informatics-8"
+
+@term key="algorithm"
+@term key="algorithm"
+
+@definition term="unknown_term"
+Определение для несуществующего термина.
+
+@chapter id="ch-1" title="Первая глава"
+Текст.
+
+@question id="q1" chapter="missing-chapter" type="single"
+Вопрос с неверной ссылкой на главу.
+
+@key question="missing-question"
+A
