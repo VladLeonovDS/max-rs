@@ -43,7 +43,7 @@ class RecommendationServiceTest {
                 """;
         assertTrue(importService.importCourse(course, true).valid());
 
-        var start = assessmentService.startAssessment("st-1", "rec-1");
+        var start = assessmentService.startAssessment("st-1", "rec-1", "c1");
         List<AssessmentModels.AssessmentAttempt> attempts = start.questions().stream()
                 .map(q -> new AssessmentModels.AssessmentAttempt(start.sessionId(), q.questionId(), q.correctOption()))
                 .toList();

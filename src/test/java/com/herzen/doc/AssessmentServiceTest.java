@@ -40,7 +40,7 @@ class AssessmentServiceTest {
         var imported = importService.importCourse(course, true);
         assertTrue(imported.valid());
 
-        AssessmentModels.AssessmentStartResponse start = assessmentService.startAssessment("student-1", "inf-8");
+        AssessmentModels.AssessmentStartResponse start = assessmentService.startAssessment("student-1", "inf-8", "c1");
         assertFalse(start.questions().isEmpty());
 
         List<AssessmentModels.AssessmentAttempt> attempts = start.questions().stream()
@@ -85,7 +85,7 @@ class AssessmentServiceTest {
         var imported = importService.importCourse(course, true);
         assertTrue(imported.valid());
 
-        var start = assessmentService.startAssessment("student-2", "inf-8-local");
+        var start = assessmentService.startAssessment("student-2", "inf-8-local", "c1");
         assertFalse(start.questions().isEmpty());
 
         var question = start.questions().get(0);

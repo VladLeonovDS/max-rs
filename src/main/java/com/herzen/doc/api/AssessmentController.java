@@ -18,7 +18,7 @@ public class AssessmentController {
 
     @PostMapping("/start")
     public ResponseEntity<AssessmentModels.AssessmentStartResponse> start(@RequestBody StartRequest request) {
-        return ResponseEntity.ok(assessmentService.startAssessment(request.studentId(), request.courseId()));
+        return ResponseEntity.ok(assessmentService.startAssessment(request.studentId(), request.courseId(), request.chapterId()));
     }
 
     @PostMapping("/submit")
@@ -33,7 +33,7 @@ public class AssessmentController {
         return ResponseEntity.ok(assessmentService.profile(studentId, courseId));
     }
 
-    public record StartRequest(String studentId, String courseId) {}
+    public record StartRequest(String studentId, String courseId, String chapterId) {}
 
     public record SubmitRequest(String studentId,
                                 String courseId,
