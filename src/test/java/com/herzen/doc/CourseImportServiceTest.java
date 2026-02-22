@@ -60,4 +60,33 @@ class CourseImportServiceTest {
         assertTrue(result.errors().stream().anyMatch(e -> e.code().equals("MISSING_META")));
         assertTrue(result.errors().stream().anyMatch(e -> e.line() > 0));
     }
+
+    @Test
+    void keepsUsesTermsFromChapterAttributeWithoutMentionsInBody() {
+        String doc = """
+                @meta version="1.0.0" course="informatics-uses"
+                @term key="t1"
+                @definition term="t1"
+                Definition
+                @term key="t2"
+                @definition term="t2"
+                Definition
+                @chapter id="ch1" title="Intro" introduces="t1"
+                Intro text
+                @chapter id="ch2" title="Next" requires="ch1" uses="t1,t2"
+                Text without term mentions
+                @question id="q1" chapter="ch1" type="single"
+                Prompt
+                @key question="q1"
+                A
+                """;
+
+        var result = service.importCourse(doc, true);
+        assertTrue(result.valid());
+
+        var explain = service.explainChapter("informatics-uses", "ch2", Set.of("ch1"), Set.of("t1"));
+        assertFalse(explain.eligible());
+        assertTrue(explain.missingTerms().contains("t2"));
+    }
+
 }

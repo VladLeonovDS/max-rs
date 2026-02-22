@@ -6,29 +6,16 @@ const state = {
   currentQuestionIdx: 0,
   attempts: [],
   coveredTerms: new Set(),
-  termDefinitions: {
-    алгоритм: 'Последовательность шагов для решения задачи.',
-    граф: 'Модель данных из вершин и рёбер между ними.',
-    сложность: 'Оценка затрат ресурсов алгоритма.'
-  },
+  termDefinitions: {},
   readingAnchorY: 0,
   currentChapterId: null,
   completedChapterIds: new Set(),
   recommenderVersion: 'hybrid',
   recommendedChapterId: null,
   chaptersById: {},
-  chapterOrder: []
+  chapterOrder: [],
+  termsOrder: []
 };
-
-const chapterTemplate = [
-  'В этой главе мы рассматриваем ',
-  { term: 'алгоритм' },
-  ', а также как представить знания через ',
-  { term: 'граф' },
-  '. Для оценки подходов важна ',
-  { term: 'сложность' },
-  ' вычислений.'
-];
 
 const assessmentEls = {
   studentId: document.getElementById('student-id'),
@@ -68,45 +55,40 @@ assessmentEls.submitBtn.addEventListener('click', submitAssessment);
 readingEls.backBtn.addEventListener('click', closeDefinitionPanel);
 window.addEventListener('scroll', persistReadingPosition);
 
-function parseHerzenDocChapters(content) {
-  const lines = content.split(/\r?\n/);
-  const chaptersById = {};
-  const chapterOrder = [];
+function normalizeTermMentions(text) {
+  if (!text) return '';
+  return text.replace(/@([a-zA-Z0-9_-]+)/g, (_, key) => key.replace(/_/g, ' '));
+}
 
-  let current = null;
-  const flushCurrent = () => {
-    if (!current?.id) return;
-    current.content = current.contentLines.join('\n').trim();
-    delete current.contentLines;
-    chaptersById[current.id] = current;
-    chapterOrder.push(current.id);
-  };
+function prettifyTermKey(key) {
+  if (!key) return '';
+  return key.replace(/_/g, ' ');
+}
 
-  lines.forEach((line) => {
-    const chapterMatch = line.match(/^@chapter\s+id="([^"]+)"\s+title="([^"]+)"(?:\s+[^\n]*)?$/);
-    if (chapterMatch) {
-      flushCurrent();
-      current = {
-        id: chapterMatch[1],
-        title: chapterMatch[2],
-        contentLines: []
-      };
-      return;
-    }
+function applyImportedCourse(course) {
+  const chapters = Array.isArray(course?.chapters) ? course.chapters : [];
+  state.chaptersById = Object.fromEntries(chapters.map((chapter) => [chapter.id, {
+    id: chapter.id,
+    title: chapter.title,
+    content: normalizeTermMentions(chapter.content || '')
+  }]));
+  state.chapterOrder = chapters.map((chapter) => chapter.id);
 
-    if (line.startsWith('@') && current) {
-      flushCurrent();
-      current = null;
-      return;
-    }
+  const terms = Array.isArray(course?.terms) ? course.terms : [];
+  state.termsOrder = terms.map((term) => term.key);
+  state.termDefinitions = Object.fromEntries(terms.map((term) => [term.key, term.definition || 'Определение временно отсутствует.']));
 
-    if (current) {
-      current.contentLines.push(line);
-    }
-  });
+  if (!state.currentChapterId && state.chapterOrder.length > 0) {
+    state.currentChapterId = state.chapterOrder[0];
+  }
 
-  flushCurrent();
-  return { chaptersById, chapterOrder };
+  renderCurrentChapter();
+  renderChapter();
+  renderMasteryIndicators();
+}
+
+function fallbackNextChapter() {
+  return state.chapterOrder.find((chapterId) => !state.completedChapterIds.has(chapterId) && chapterId !== state.currentChapterId) || null;
 }
 
 async function ensureInf8PilotCourse() {
@@ -118,9 +100,6 @@ async function ensureInf8PilotCourse() {
   }
 
   const content = await contentResponse.text();
-  const parsed = parseHerzenDocChapters(content);
-  state.chaptersById = parsed.chaptersById;
-  state.chapterOrder = parsed.chapterOrder;
 
   const response = await fetch('/api/courses/import', {
     method: 'POST',
@@ -136,13 +115,8 @@ async function ensureInf8PilotCourse() {
 
   assessmentEls.courseId.value = payload.course.id;
   state.courseId = payload.course.id;
+  applyImportedCourse(payload.course);
   assessmentEls.status.textContent = `Курс ${payload.course.title} (${payload.course.id}) готов к обучению.`;
-
-  if (!state.currentChapterId && state.chapterOrder.length > 0) {
-    state.currentChapterId = state.chapterOrder[0];
-    renderCurrentChapter();
-    renderChapter();
-  }
 
   return true;
 }
@@ -270,29 +244,17 @@ function renderChapter() {
 
   const chapter = state.currentChapterId ? state.chaptersById[state.currentChapterId] : null;
   if (chapter?.content) {
-    readingEls.chapter.textContent = chapter.content;
+    readingEls.chapter.textContent = normalizeTermMentions(chapter.content);
     return;
   }
 
-  chapterTemplate.forEach((part) => {
-    if (typeof part === 'string') {
-      readingEls.chapter.insertAdjacentText('beforeend', part);
-      return;
-    }
-
-    const termButton = document.createElement('button');
-    termButton.className = 'term-chip';
-    termButton.type = 'button';
-    termButton.textContent = part.term;
-    termButton.addEventListener('click', () => openDefinitionPanel(part.term));
-    readingEls.chapter.appendChild(termButton);
-  });
+  readingEls.chapter.textContent = 'Текст главы пока недоступен.';
 }
 
 function openDefinitionPanel(term) {
   emitEvent('term_click', { chapterId: state.currentChapterId, payload: `term=${term}` });
   state.readingAnchorY = window.scrollY;
-  readingEls.term.textContent = term;
+  readingEls.term.textContent = prettifyTermKey(term);
   readingEls.text.textContent = state.termDefinitions[term] || 'Определение временно отсутствует.';
   readingEls.panel.hidden = false;
 }
@@ -304,12 +266,16 @@ function closeDefinitionPanel() {
 }
 
 function renderMasteryIndicators() {
-  const terms = Object.keys(state.termDefinitions);
-  const covered = terms.filter((term) => state.coveredTerms.has(term));
-  const remaining = terms.filter((term) => !state.coveredTerms.has(term));
+  const terms = state.termsOrder.length ? state.termsOrder : Object.keys(state.termDefinitions);
+  const covered = terms.filter((termKey) => state.coveredTerms.has(termKey));
+  const remaining = terms.filter((termKey) => !state.coveredTerms.has(termKey));
 
-  readingEls.covered.innerHTML = covered.map((term) => `<li class="covered">${term}</li>`).join('') || '<li class="covered">Пока нет</li>';
-  readingEls.remaining.innerHTML = remaining.map((term) => `<li class="remaining">${term}</li>`).join('') || '<li class="remaining">Нет</li>';
+  readingEls.covered.innerHTML = covered
+    .map((termKey) => `<li class="covered">${prettifyTermKey(termKey)}</li>`)
+    .join('') || '<li class="covered">Пока нет</li>';
+  readingEls.remaining.innerHTML = remaining
+    .map((termKey) => `<li class="remaining">${prettifyTermKey(termKey)}</li>`)
+    .join('') || '<li class="remaining">Нет</li>';
 }
 
 async function goToNextRecommendedChapter() {
@@ -322,9 +288,9 @@ async function goToNextRecommendedChapter() {
   const response = await fetch(`/api/recommendations/next?studentId=${encodeURIComponent(state.studentId)}&courseId=${encodeURIComponent(state.courseId)}&completedChapterIds=${encodeURIComponent(completedChapterIds)}&recommenderVersion=${encodeURIComponent(state.recommenderVersion)}`);
   const payload = await response.json();
 
-  state.recommendedChapterId = payload.chapterId || null;
+  state.recommendedChapterId = payload.chapterId || fallbackNextChapter();
   if (!state.recommendedChapterId) {
-    assessmentEls.status.textContent = 'Рекомендация пока не найдена.';
+    assessmentEls.status.textContent = 'Рекомендация пока не найдена: все главы пройдены или недоступны.';
     return;
   }
 

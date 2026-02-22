@@ -135,7 +135,7 @@ public class HerzenDocParser {
 
                 List<String> prereq = csv(attrs.get("requires"));
                 List<String> introduces = csv(attrs.get("introduces"));
-                List<String> uses = extractUsedTerms(body);
+                List<String> uses = mergeDistinct(csv(attrs.get("uses")), extractUsedTerms(body));
                 chapters.add(new ChapterDoc(id, title, difficulty, normalizeChapterContent(body), prereq, introduces, uses, line));
             }
             case "term" -> {
@@ -183,6 +183,14 @@ public class HerzenDocParser {
             keys.add(matcher.group(1));
         }
         return List.copyOf(keys);
+    }
+
+
+    private List<String> mergeDistinct(List<String> primary, List<String> secondary) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        if (primary != null) merged.addAll(primary);
+        if (secondary != null) merged.addAll(secondary);
+        return List.copyOf(merged);
     }
 
     private String normalizeChapterContent(String body) {
