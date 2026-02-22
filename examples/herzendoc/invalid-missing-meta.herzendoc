@@ -1,0 +1,7 @@
+# invalid example: missing @meta
+@term key="algorithm"
+@definition term="algorithm"
+Алгоритм — конечная последовательность шагов.
+
+@chapter id="ch-intro" title="Введение" difficulty="1"
+Текст главы.
