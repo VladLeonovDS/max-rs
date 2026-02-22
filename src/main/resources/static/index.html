@@ -16,17 +16,8 @@
   <section class="card" id="assessment-card">
     <h2>1. Входной тест</h2>
     <div class="controls-row">
-      <label for="herzendoc-variant">HerzenDoc-вариант</label>
-      <select id="herzendoc-variant" aria-label="HerzenDoc вариант курса">
-        <option value="demo" selected>Демо: встроенный курс (course-001)</option>
-        <option value="valid-course">valid-course.herzendoc (informatics-8)</option>
-        <option value="algorithms-track">Algorithms Track (algorithms-track-2026)</option>
-      </select>
-      <button id="apply-variant" type="button">Применить курс</button>
-    </div>
-    <div class="controls-row">
       <input id="student-id" value="student-001" aria-label="Student ID" />
-      <input id="course-id" value="course-001" aria-label="Course ID" />
+      <input id="course-id" value="inf-8-pilot" aria-label="Course ID" readonly />
       <button id="start-assessment">Начать тест</button>
     </div>
     <div class="progress-wrap" hidden id="assessment-progress-wrap">
@@ -62,14 +53,6 @@
     </div>
   </section>
 
-  <section class="card" id="recommendation-card">
-    <h2>3. Следующая рекомендуемая глава</h2>
-    <div class="controls-row">
-      <button id="load-recommendation">Показать рекомендацию</button>
-      <button id="accept-recommendation" type="button">Принять рекомендацию</button>
-    </div>
-    <div id="recommendation-result" class="muted"></div>
-  </section>
 </main>
 
 <aside class="definition-panel" id="definition-panel" hidden>
