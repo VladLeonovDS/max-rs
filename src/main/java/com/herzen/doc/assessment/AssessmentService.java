@@ -18,6 +18,7 @@ public class AssessmentService {
 
     private final Map<String, AssessmentSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, List<AssessmentQuestion>> questionBankByCourse = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Set<String>>> chapterTermsByCourse = new ConcurrentHashMap<>();
 
     public AssessmentService(AssessmentJdbcRepository repository) {
         this.repository = repository;
@@ -28,11 +29,29 @@ public class AssessmentService {
                 .map(term -> buildQuestion(term.key(), doc))
                 .toList();
         questionBankByCourse.put(courseId, questions);
+
+        Map<String, Set<String>> chapterTerms = doc.chapters().stream()
+                .collect(Collectors.toMap(
+                        ParserDtos.ChapterDoc::id,
+                        chapter -> chapter.introducedTermKeys() == null ? Set.of() : new LinkedHashSet<>(chapter.introducedTermKeys()),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        chapterTermsByCourse.put(courseId, chapterTerms);
     }
 
-    public AssessmentStartResponse startAssessment(String studentId, String courseId) {
+    public AssessmentStartResponse startAssessment(String studentId, String courseId, String chapterId) {
         List<AssessmentQuestion> bank = questionBankByCourse.getOrDefault(courseId, List.of());
-        List<AssessmentQuestion> initial = bank.stream().limit(5).toList();
+        Set<String> chapterTerms = chapterTermsByCourse
+                .getOrDefault(courseId, Map.of())
+                .getOrDefault(chapterId, Set.of());
+
+        List<AssessmentQuestion> chapterScoped = chapterTerms.isEmpty()
+                ? List.of()
+                : bank.stream().filter(question -> chapterTerms.contains(question.termKey())).toList();
+
+        List<AssessmentQuestion> source = chapterScoped.isEmpty() ? bank : chapterScoped;
+        List<AssessmentQuestion> initial = source.stream().limit(5).toList();
         String sessionId = UUID.randomUUID().toString();
         sessions.put(sessionId, new AssessmentSession(sessionId, courseId, Instant.now(),
                 initial.stream().map(AssessmentQuestion::termKey).collect(Collectors.toSet()), false));

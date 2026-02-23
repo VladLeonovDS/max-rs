@@ -56,4 +56,19 @@ class AnalyticsServiceTest {
         assertFalse(bottlenecks.bottlenecks().isEmpty());
     }
 
+    @Test
+    void recomputeSkipsEventsWithoutChapterId() {
+        var request = new AnalyticsModels.LearningEventIngestRequest(List.of(
+                new AnalyticsModels.EventIn("st-null", "course-null", null, "chapter_open", Instant.now(), "", "v1"),
+                new AnalyticsModels.EventIn("st-null", "course-null", "ch-valid", "chapter_open", Instant.now().plusSeconds(1), "", "v1")
+        ));
+
+        analyticsService.ingest(request);
+        assertDoesNotThrow(() -> analyticsService.recomputeAggregates());
+
+        var overview = analyticsService.overview("st-null", "course-null", null);
+        assertTrue(overview.aggregates().stream().noneMatch(a -> a.chapterId() == null));
+        assertTrue(overview.aggregates().stream().anyMatch(a -> "ch-valid".equals(a.chapterId())));
+    }
+
 }

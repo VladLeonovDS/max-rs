@@ -37,6 +37,7 @@ public class AnalyticsService {
 
         Map<Key, List<AnalyticsJdbcRepository.EventRow>> grouped = events.stream()
                 .filter(e -> e.studentId() != null && e.courseId() != null)
+                .filter(e -> e.chapterId() != null && !e.chapterId().isBlank())
                 .collect(Collectors.groupingBy(e -> new Key(e.studentId(), e.courseId(), e.chapterId(), normalizeVersion(e.recommenderVersion()))));
 
         for (var entry : grouped.entrySet()) {

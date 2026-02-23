@@ -14,7 +14,8 @@ const state = {
   recommendedChapterId: null,
   chaptersById: {},
   chapterOrder: [],
-  termsOrder: []
+  termsOrder: [],
+  termLabels: {}
 };
 
 const assessmentEls = {
@@ -57,12 +58,31 @@ window.addEventListener('scroll', persistReadingPosition);
 
 function normalizeTermMentions(text) {
   if (!text) return '';
-  return text.replace(/@([a-zA-Z0-9_-]+)/g, (_, key) => key.replace(/_/g, ' '));
+  return text.replace(/@([a-zA-Z0-9_-]+)/g, (_, key) => state.termLabels[key] || key.replace(/_/g, ' '));
+}
+
+function extractTermLabel(definition, fallbackKey) {
+  if (!definition) return fallbackKey.replace(/_/g, ' ');
+  const normalized = definition.trim().replace(/\s+/g, ' ');
+  const separatorIdx = normalized.search(/[—-]/);
+  if (separatorIdx > 0) {
+    return normalized.slice(0, separatorIdx).trim();
+  }
+  return fallbackKey.replace(/_/g, ' ');
 }
 
 function prettifyTermKey(key) {
   if (!key) return '';
-  return key.replace(/_/g, ' ');
+  return state.termLabels[key] || key.replace(/_/g, ' ');
+}
+
+function escapeHtml(text) {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 function applyImportedCourse(course) {
@@ -70,13 +90,14 @@ function applyImportedCourse(course) {
   state.chaptersById = Object.fromEntries(chapters.map((chapter) => [chapter.id, {
     id: chapter.id,
     title: chapter.title,
-    content: normalizeTermMentions(chapter.content || '')
+    content: chapter.content || ''
   }]));
   state.chapterOrder = chapters.map((chapter) => chapter.id);
 
   const terms = Array.isArray(course?.terms) ? course.terms : [];
   state.termsOrder = terms.map((term) => term.key);
   state.termDefinitions = Object.fromEntries(terms.map((term) => [term.key, term.definition || 'Определение временно отсутствует.']));
+  state.termLabels = Object.fromEntries(terms.map((term) => [term.key, extractTermLabel(term.definition || '', term.key)]));
 
   if (!state.currentChapterId && state.chapterOrder.length > 0) {
     state.currentChapterId = state.chapterOrder[0];
@@ -135,7 +156,7 @@ async function startAssessment(options = {}) {
   const response = await fetch('/api/assessment/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId: state.studentId, courseId: state.courseId })
+    body: JSON.stringify({ studentId: state.studentId, courseId: state.courseId, chapterId: state.currentChapterId })
   });
   const payload = await response.json();
   state.sessionId = payload.sessionId;
@@ -244,7 +265,18 @@ function renderChapter() {
 
   const chapter = state.currentChapterId ? state.chaptersById[state.currentChapterId] : null;
   if (chapter?.content) {
-    readingEls.chapter.textContent = normalizeTermMentions(chapter.content);
+    const fragments = chapter.content.split(/(@[a-zA-Z0-9_-]+)/g);
+    readingEls.chapter.innerHTML = fragments.map((fragment) => {
+      if (fragment.startsWith('@')) {
+        const termKey = fragment.slice(1);
+        return `<button type="button" class="term-link" data-term="${escapeHtml(termKey)}">${escapeHtml(prettifyTermKey(termKey))}</button>`;
+      }
+      return escapeHtml(fragment);
+    }).join('').replace(/\n/g, '<br/>');
+
+    readingEls.chapter.querySelectorAll('.term-link').forEach((node) => {
+      node.addEventListener('click', () => openDefinitionPanel(node.dataset.term));
+    });
     return;
   }
 
